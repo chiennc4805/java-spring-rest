@@ -7,7 +7,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class HelloController {
 
     @GetMapping("/")
+    // @CrossOrigin
     public String getHelloWorld() {
-        return "Hello World (Hỏi Dân IT & Eric)";
+        return "update Hello World (Hỏi Dân IT & Eric)";
     }
 }

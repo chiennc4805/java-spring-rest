@@ -6,7 +6,7 @@ public class LoginDTO {
     @NotBlank(message = "username không được để trống")
     private String username;
 
-    @NotBlank(message = "password không được để trống")
+    @NotBlank(message = "t không được để trống")
     private String password;
 
     public String getUsername() {

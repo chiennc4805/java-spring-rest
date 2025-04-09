@@ -2,13 +2,21 @@ package vn.hoidanit.jobhunter.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+
+import javax.management.openmbean.InvalidKeyException;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import vn.hoidanit.jobhunter.domain.User;
+import vn.hoidanit.jobhunter.domain.dto.ResCreateUserDTO;
+import vn.hoidanit.jobhunter.domain.dto.ResUpdateUserDTO;
+import vn.hoidanit.jobhunter.domain.dto.ResUserDTO;
 import vn.hoidanit.jobhunter.domain.dto.Meta;
 import vn.hoidanit.jobhunter.domain.dto.ResultPaginationDTO;
 import vn.hoidanit.jobhunter.repository.UserRepository;
@@ -22,6 +30,10 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
+    public boolean isEmailExist(String email) {
+        return this.userRepository.existsByEmail(email);
+    }
+
     public User handleCreateUser(User user) {
         return this.userRepository.save(user);
     }
@@ -29,9 +41,10 @@ public class UserService {
     public User handleUpdateUser(User user) {
         User currentUser = this.fetchUserById(user.getId());
         if (currentUser != null) {
-            currentUser.setEmail(user.getEmail());
+            currentUser.setAddress(user.getAddress());
+            currentUser.setGender(user.getGender());
             currentUser.setName(user.getName());
-            currentUser.setPassword(user.getPassword());
+            currentUser.setAge(user.getAge());
             currentUser = this.userRepository.save(currentUser);
         }
         return currentUser;
@@ -53,8 +66,21 @@ public class UserService {
         mt.setTotal(pageUser.getTotalElements());
 
         rs.setMeta(mt);
-        rs.setResult(pageUser.getContent());
 
+        // remove sensitive data
+        List<ResUserDTO> listUser = pageUser.getContent()
+                .stream().map(item -> new ResUserDTO(
+                        item.getId(),
+                        item.getEmail(),
+                        item.getName(),
+                        item.getGender(),
+                        item.getAddress(),
+                        item.getAge(),
+                        item.getUpdatedAt(),
+                        item.getCreatedAt()))
+                .collect(Collectors.toList());
+
+        rs.setResult(listUser);
         return rs;
     }
 
@@ -68,6 +94,48 @@ public class UserService {
 
     public User handleGetUserByUsername(String email) {
         return this.userRepository.findByEmail(email);
+    }
+
+    public ResCreateUserDTO convertToResCreateUserDTO(User user) {
+        ResCreateUserDTO createUserDTO = new ResCreateUserDTO();
+
+        createUserDTO.setId(user.getId());
+        createUserDTO.setName(user.getName());
+        createUserDTO.setEmail(user.getEmail());
+        createUserDTO.setGender(user.getGender());
+        createUserDTO.setAddress(user.getAddress());
+        createUserDTO.setAge(user.getAge());
+        createUserDTO.setCreatedAt(user.getCreatedAt());
+
+        return createUserDTO;
+    }
+
+    public ResUserDTO convertToResUserDTO(User user) {
+        ResUserDTO res = new ResUserDTO();
+
+        res.setId(user.getId());
+        res.setName(user.getName());
+        res.setEmail(user.getEmail());
+        res.setGender(user.getGender());
+        res.setAddress(user.getAddress());
+        res.setAge(user.getAge());
+        res.setCreatedAt(user.getCreatedAt());
+        res.setUpdatedAt(user.getUpdatedAt());
+
+        return res;
+    }
+
+    public ResUpdateUserDTO convertToResUpdateUserDTO(User user) {
+        ResUpdateUserDTO res = new ResUpdateUserDTO();
+
+        res.setId(user.getId());
+        res.setName(user.getName());
+        res.setGender(user.getGender());
+        res.setAddress(user.getAddress());
+        res.setAge(user.getAge());
+        res.setUpdatedAt(user.getUpdatedAt());
+
+        return res;
     }
 
 }

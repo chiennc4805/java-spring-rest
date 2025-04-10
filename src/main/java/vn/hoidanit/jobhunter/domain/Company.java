@@ -38,11 +38,13 @@ public class Company {
 
     private String logo;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss a", timezone = "GMT+7") // a trong pattern để sử dụng am pm
+    // @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss a", timezone = "GMT+7") // a trong
+    // pattern để sử dụng am pm
     // instant mặc định là GMT +0 nên hiển thị giao diện là +7, trong db vẫn là +0
     private Instant createdAt;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss a", timezone = "GMT+7") // a trong pattern để sử dụng am pm
+    // @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss a", timezone = "GMT+7") // a trong
+    // pattern để sử dụng am pm
     private Instant updatedAt;
 
     private String createdBy;

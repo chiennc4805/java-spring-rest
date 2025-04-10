@@ -10,9 +10,14 @@ import javax.management.openmbean.InvalidKeyException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-
+import vn.hoidanit.jobhunter.config.CustomAuthenticationEntryPoint;
 import vn.hoidanit.jobhunter.domain.User;
 import vn.hoidanit.jobhunter.domain.dto.ResCreateUserDTO;
 import vn.hoidanit.jobhunter.domain.dto.ResUpdateUserDTO;
@@ -24,10 +29,13 @@ import vn.hoidanit.jobhunter.repository.UserRepository;
 @Service
 public class UserService {
 
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+
     private final UserRepository userRepository;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
         this.userRepository = userRepository;
+        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
     }
 
     public boolean isEmailExist(String email) {
@@ -136,6 +144,18 @@ public class UserService {
         res.setUpdatedAt(user.getUpdatedAt());
 
         return res;
+    }
+
+    public void updateUserToken(String token, String email) {
+        User currentUser = this.handleGetUserByUsername(email);
+        if (currentUser != null) {
+            currentUser.setRefreshToken(token);
+            this.userRepository.save(currentUser);
+        }
+    }
+
+    public User getUserByRefreshTokenAndEmail(String token, String email) {
+        return this.userRepository.findByRefreshTokenAndEmail(token, email);
     }
 
 }

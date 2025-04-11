@@ -2,39 +2,38 @@ package vn.hoidanit.jobhunter.service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
-
-import javax.management.openmbean.InvalidKeyException;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import vn.hoidanit.jobhunter.config.CustomAuthenticationEntryPoint;
+import vn.hoidanit.jobhunter.domain.Company;
+import vn.hoidanit.jobhunter.domain.Role;
 import vn.hoidanit.jobhunter.domain.User;
 import vn.hoidanit.jobhunter.domain.response.ResCreateUserDTO;
 import vn.hoidanit.jobhunter.domain.response.ResUpdateUserDTO;
 import vn.hoidanit.jobhunter.domain.response.ResUserDTO;
+import vn.hoidanit.jobhunter.domain.response.ResUserDTO.RoleUser;
 import vn.hoidanit.jobhunter.domain.response.ResultPaginationDTO;
+import vn.hoidanit.jobhunter.repository.CompanyRepository;
 import vn.hoidanit.jobhunter.repository.UserRepository;
 
 @Service
 public class UserService {
 
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
-
+    private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
+    private final RoleService roleService;
 
-    public UserService(UserRepository userRepository, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
+    public UserService(UserRepository userRepository, CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
+            CompanyRepository companyRepository, RoleService roleService) {
         this.userRepository = userRepository;
         this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
+        this.companyRepository = companyRepository;
+        this.roleService = roleService;
     }
 
     public boolean isEmailExist(String email) {
@@ -42,6 +41,17 @@ public class UserService {
     }
 
     public User handleCreateUser(User user) {
+        // check company
+        if (user.getCompany() != null) {
+            Optional<Company> companyOptional = this.companyRepository.findById(user.getCompany().getId());
+            user.setCompany(companyOptional.isPresent() == true ? companyOptional.get() : null);
+        }
+
+        // check role
+        if (user.getRole() != null) {
+            Role r = this.roleService.fetchById(user.getRole().getId());
+            user.setRole(r != null ? r : null);
+        }
         return this.userRepository.save(user);
     }
 
@@ -52,6 +62,20 @@ public class UserService {
             currentUser.setGender(user.getGender());
             currentUser.setName(user.getName());
             currentUser.setAge(user.getAge());
+
+            // check company
+            if (user.getCompany() != null) {
+                Optional<Company> companyOptional = this.companyRepository.findById(user.getId());
+                currentUser.setCompany(companyOptional.isPresent() ? companyOptional.get() : null);
+            }
+
+            // check role
+            if (user.getRole() != null) {
+                Role r = this.roleService.fetchById(user.getRole().getId());
+                user.setRole(r != null ? r : null);
+            }
+
+            // update
             currentUser = this.userRepository.save(currentUser);
         }
         return currentUser;
@@ -76,15 +100,7 @@ public class UserService {
 
         // remove sensitive data
         List<ResUserDTO> listUser = pageUser.getContent()
-                .stream().map(item -> new ResUserDTO(
-                        item.getId(),
-                        item.getEmail(),
-                        item.getName(),
-                        item.getGender(),
-                        item.getAddress(),
-                        item.getAge(),
-                        item.getUpdatedAt(),
-                        item.getCreatedAt()))
+                .stream().map(item -> convertToResUserDTO(item))
                 .collect(Collectors.toList());
 
         rs.setResult(listUser);
@@ -104,21 +120,41 @@ public class UserService {
     }
 
     public ResCreateUserDTO convertToResCreateUserDTO(User user) {
-        ResCreateUserDTO createUserDTO = new ResCreateUserDTO();
+        ResCreateUserDTO res = new ResCreateUserDTO();
+        ResCreateUserDTO.CompanyUser com = new ResCreateUserDTO.CompanyUser();
 
-        createUserDTO.setId(user.getId());
-        createUserDTO.setName(user.getName());
-        createUserDTO.setEmail(user.getEmail());
-        createUserDTO.setGender(user.getGender());
-        createUserDTO.setAddress(user.getAddress());
-        createUserDTO.setAge(user.getAge());
-        createUserDTO.setCreatedAt(user.getCreatedAt());
+        res.setId(user.getId());
+        res.setName(user.getName());
+        res.setEmail(user.getEmail());
+        res.setGender(user.getGender());
+        res.setAddress(user.getAddress());
+        res.setAge(user.getAge());
+        res.setCreatedAt(user.getCreatedAt());
 
-        return createUserDTO;
+        if (user.getCompany() != null) {
+            com.setId(user.getCompany().getId());
+            com.setName(user.getCompany().getName());
+            res.setCompany(com);
+        }
+        return res;
     }
 
     public ResUserDTO convertToResUserDTO(User user) {
         ResUserDTO res = new ResUserDTO();
+        ResUserDTO.CompanyUser com = new ResUserDTO.CompanyUser();
+        ResUserDTO.RoleUser roleUser = new ResUserDTO.RoleUser();
+
+        if (user.getCompany() != null) {
+            com.setId(user.getCompany().getId());
+            com.setName(user.getCompany().getName());
+            res.setCompany(com);
+        }
+
+        if (user.getRole() != null) {
+            roleUser.setId(user.getRole().getId());
+            roleUser.setName(user.getRole().getName());
+            res.setRole(roleUser);
+        }
 
         res.setId(user.getId());
         res.setName(user.getName());
@@ -134,6 +170,13 @@ public class UserService {
 
     public ResUpdateUserDTO convertToResUpdateUserDTO(User user) {
         ResUpdateUserDTO res = new ResUpdateUserDTO();
+        ResUpdateUserDTO.CompanyUser com = new ResUpdateUserDTO.CompanyUser();
+
+        if (user.getCompany() != null) {
+            com.setId(user.getCompany().getId());
+            com.setName(user.getCompany().getName());
+            res.setCompany(com);
+        }
 
         res.setId(user.getId());
         res.setName(user.getName());

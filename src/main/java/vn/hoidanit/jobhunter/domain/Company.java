@@ -1,14 +1,18 @@
 package vn.hoidanit.jobhunter.domain;
 
 import java.time.Instant;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PostUpdate;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -43,13 +47,21 @@ public class Company {
     // instant mặc định là GMT +0 nên hiển thị giao diện là +7, trong db vẫn là +0
     private Instant createdAt;
 
-    // @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss a", timezone = "GMT+7") // a trong
-    // pattern để sử dụng am pm
     private Instant updatedAt;
 
     private String createdBy;
 
     private String updatedBy;
+
+    @OneToMany(mappedBy = "company", fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<Job> jobs;
+
+    @OneToMany(mappedBy = "company", fetch = FetchType.LAZY)
+    @JsonIgnore // tại phía frontend gửi lên, không quan tâm danh sách gửi lên, tại phía
+                // backend, trước khi trả về data cho người dùng, không trả về danh sách user
+                // => bỏ thuộc tính khỏi phản hồi => tránh lặp vô hạn
+    private List<User> listUser;
 
     @PrePersist
     public void handleBeforeCreated() {

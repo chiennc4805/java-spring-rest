@@ -197,7 +197,7 @@ public class AuthController {
                 .body(null);
     }
 
-    @PostMapping("/register")
+    @PostMapping("/auth/register")
     @ApiMessage("register a new user")
     public ResponseEntity<ResCreateUserDTO> createNewUser(@Valid @RequestBody User postManUser)
             throws IdInvalidException {
